@@ -99,7 +99,7 @@ class PasswordCracker:
 
         # For all other positions, use timing analysis
         char_scores: Dict[str, float] = defaultdict(float)
-        samples_per_char = 3
+        samples_per_char = 4
 
         for char in self.charset:
             current_password[position] = char
