@@ -67,17 +67,13 @@ class PasswordCracker:
             length_times[length] = times
 
         # Find length with most distinct timing pattern
-        best_length = max(length_times.items(), key=lambda x: statistics.median(x[1]))[0]
+        best_length = max(length_times.items(), key=lambda x: statistics.mean(x[1]))[0]
         return best_length
 
-    def analyze_times_median(self, times: List[float]) -> float:
-        """Analyze timing distribution using median after removing outliers."""
-        q1 = np.percentile(times, 25)
-        q3 = np.percentile(times, 75)
-        iqr = q3 - q1
-        filtered_times = [t for t in times if q1 - 1.5 * iqr <= t <= q3 + 1.5 * iqr]
+    def analyze_times_mean(self, times: List[float]) -> float:
+        """Analyze timing distribution using mean."""
 
-        return statistics.median(filtered_times) if filtered_times else 0
+        return statistics.mean(times)
 
     def crack_position(self, username: str, current_password: List[str],
                        position: int, difficulty: int) -> str:
@@ -107,7 +103,7 @@ class PasswordCracker:
 
             times = self.measure_response_time(username, test_password, difficulty,
                                                num_samples=samples_per_char)
-            score = self.analyze_times_median(times)
+            score = self.analyze_times_mean(times)
             char_scores[char] = score
 
         print(f"Character scores at position {position + 1}: {char_scores}",
