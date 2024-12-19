@@ -169,8 +169,8 @@ def main():
 
     username = sys.argv[1]
     difficulty = int(sys.argv[2]) if len(sys.argv) > 2 else 2
-    #base_url = "http://aoi-assignment1.oy.ne.ro:8080"
-    base_url = "http://localhost"
+    base_url = "http://aoi-assignment1.oy.ne.ro:8080"
+    #base_url = "http://localhost"
 
     try:
         cracker = PasswordCracker(base_url)
